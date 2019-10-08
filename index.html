@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Peak Finder</title>
+
+  <script src="./libraries/vue.js"></script>
+  <script src="./libraries/plotly.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="normalize.css">
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <meta name="description" content="An explorable toy model of Earth's climate." />
+</head>
+<body>
+
+  <div id="root" class="container">
+
+    <div id="title">
+      <h1>Audacity Peak Finder</h1>
+      <h3>Find Peaks from Audacity's Frequency Spectrum</h3>
+    </div>
+
+    <p>In Audacity, use the cursor to select the sound snippet that you want to analyze. Select <i>Analyze</i> > <i>Plot Spectrum</i>. Set the 'Size' (i.e. spectrum resolution) to the desired value and then export the data by pressing the Export button.</p>
+
+    <p>When you're done, export the file with a .txt extension and upload.</p>
+
+    <!-- file reader using this tutorial: https://alligator.io/vuejs/file-reader-component/ -->
+    <label class="text-reader">
+      Upload File
+      <input type="file" @change="loadTextFromFile">
+    </label>
+
+    <p>Maximum Frequency (Hz): <input v-model.numer="maxFreq" debounce="500"></p>
+
+    <div v-if="spectrum.freq.length > 0">
+      <h2>Graph</h2>
+      <graph :traces="[spectrumTrace, peakTrace]" :layout="layout"></graph>
+
+      <br>
+      <p>Peak Sensitivity: High <input type="range" min="-1" max="0" step="0.01" v-model.number="slopeCutoff" debounce="500"> Low ({{slopeCutoff}})</p>
+
+    </div>
+
+    <div v-if="peaks.freq.length > 0">
+      <h2>Table of Peaks</h2>
+      <table>
+      <tr>
+        <th>Frequency (Hz)</th>
+        <th>Loudness (dB)</th>
+        <!--<th>Closest Piano Note</th>-->
+      </tr>
+      <tr v-for="peak in peakTable">
+        <td>{{peak.freq}}</td>
+        <td>{{peak.amp}}</td>
+      </tr>
+      </table>
+
+    </div>
+
+  </div>
+
+
+  <!-- page code -->
+  <script src="vue-definitions.js"></script>
+
+</body>
+</html>
