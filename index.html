@@ -23,26 +23,43 @@
 
     <p>When you're done, export the file with a .txt extension and upload.</p>
 
-    <!-- file reader using this tutorial: https://alligator.io/vuejs/file-reader-component/ -->
-    <label class="text-reader">
-      Upload File
-      <input type="file" @change="loadTextFromFile">
-    </label>
+    <div class="centerbox">
 
-    <p>Maximum Frequency (Hz): <input v-model.numer="maxFreq" debounce="500"></p>
+      <div class="tooltip">
+        <!-- file reader using this tutorial: https://alligator.io/vuejs/file-reader-component/ -->
+        <!-- tooltip styling from https://www.w3schools.com/css/css_tooltip.asp -->
+        <label class="text-reader">
+          <span class="tooltiptext">Upload Text File from Audacity</span>
+          Upload File
+          <input type="file" @change="loadTextFromFile">
+        </label>
+      </div>
+    </div>
 
-    <div v-if="spectrum.freq.length > 0">
-      <h2>Graph</h2>
+    <div v-if="text">
+      <h2>Graph of Frequency Spectrum</h2>
+
       <graph :traces="[spectrumTrace, peakTrace]" :layout="layout"></graph>
 
-      <br>
-      <p>Peak Sensitivity: High <input type="range" min="-1" max="0" step="0.01" v-model.number="slopeCutoff" debounce="500"> Low ({{slopeCutoff}})</p>
+      <p>Minimum Frequency (Hz): <input v-model.numer="minFreq" debounce="500"></p>
+      <p>Maximum Frequency (Hz): <input v-model.numer="maxFreq" debounce="500"></p>
+
+      <p>Sensitivity of Peak Detection: Low <input type="range" min="0" max="10" step="1" v-model.number="slopeCutoff" debounce="500"> High ({{slopeCutoff}})</p>
 
     </div>
 
     <div v-if="peaks.freq.length > 0">
       <h2>Table of Peaks</h2>
-      <table>
+
+      <div class="tooltip">
+      <!-- The button used to copy the text https://www.w3schools.com/howto/howto_js_copy_clipboard.asp  -->
+        <button @click="copyTable" @mouseout="outFunc">
+          <span class="tooltiptext" id="myTooltip">Copy Table to Clipboard</span>
+          Copy Table
+        </button>
+      </div>
+
+      <table id="dataTable">
       <tr>
         <th>Frequency (Hz)</th>
         <th>Loudness (dB)</th>

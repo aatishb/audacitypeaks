@@ -40,22 +40,57 @@ let app = new Vue({
 
       reader.onload = e => {
         if (file.type == 'text/plain') {
-          console.log('text loaded');
           this.text = e.target.result;
         } else {
-          console.log('file was not a text file');
+          alert('Error: Uploaded file was not a text file');
         }
       };
 
       reader.readAsText(file);
     },
 
-    smoothSlope(array, index) {
-      return (this.findSlope(array,index-2) + 2 * this.findSlope(array,index-1) + 3 * this.findSlope(array,index) + 2*this.findSlope(array,index+1) + this.findSlope(array,index+2))/9;
+    // https://stackoverflow.com/questions/2044616/select-a-complete-table-with-javascript-to-be-copied-to-clipboard/2044793#2044793
+    selectElementContents(el) {
+        var body = document.body, range, sel;
+        if (document.createRange && window.getSelection) {
+            range = document.createRange();
+            sel = window.getSelection();
+            sel.removeAllRanges();
+            try {
+                range.selectNodeContents(el);
+                sel.addRange(range);
+            } catch (e) {
+                range.selectNode(el);
+                sel.addRange(range);
+            }
+            document.execCommand("copy");
+        } else if (body.createTextRange) {
+            range = body.createTextRange();
+            range.moveToElementText(el);
+            range.select();
+            range.execCommand("Copy");
+        }
+
+      sel.removeAllRanges();
+
     },
 
-    findSlope(array, index) {
-      return array[index+2] - array[index-2];
+    copyTable() {
+      this.selectElementContents( document.getElementById("dataTable") );
+
+      let tooltip = document.getElementById("myTooltip");
+      tooltip.innerHTML = "Table Copied to Clipboard!";
+
+    },
+
+    outFunc() {
+      var tooltip = document.getElementById("myTooltip");
+      tooltip.innerHTML = "Copy Table to Clipboard";
+    },
+
+    findSlope(spectrum, i) {
+      // central difference version of derivative
+      return (spectrum.amp[i + 1] - spectrum.amp[i - 1])/((spectrum.freq[i + 1] - spectrum.freq[i - 1]));
     },
 
   },
@@ -70,21 +105,13 @@ let app = new Vue({
 
       let header = spectrumData.shift();
 
+      // filter frequencies within range
+      spectrumData = spectrumData
+        .filter(e => parseFloat(e[0]) >= this.minFreq)
+        .filter(e => parseFloat(e[0]) <= this.maxFreq);
+
       let freq = spectrumData.map(e => parseFloat(e[0]));
       let amp = spectrumData.map(e => parseFloat(e[1]));
-
-      // filter frequencies beyond cutoff
-      freq = freq.filter(e => e <= this.maxFreq);
-      amp = amp.filter((e,i) => freq[i] <= this.maxFreq);
-
-      return {
-        freq: freq,
-        amp: amp
-      }
-    },
-
-    peaks() {
-
 
       return {
         freq: freq,
@@ -115,31 +142,25 @@ let app = new Vue({
         // calculate derivative
         let p1 = {
           x: this.spectrum.freq[i],
-          y: this.smoothSlope(this.spectrum.amp, i)
+          y: this.findSlope(this.spectrum, i)
         };
 
         let p2 = {
-          x: this.spectrum.freq[i+1],
-          y: this.smoothSlope(this.spectrum.amp, i+1)
+          x: this.spectrum.freq[i + 1],
+          y: this.findSlope(this.spectrum, i + 1)
         };
 
         if (p1.y >= 0 && p2.y < 0)
         {
 
-          // linearly interpolate derivative to find frequency where derivative crosses zero
-          let secondDerivative = (p2.y - p1.y) / (p2.x - p1.x);
-          //let peakFreq = p1.x + (0 - p1.y) / secondDerivative;
+          let secondDerivative = (p2.y - p1.y) / (p2.x - p1.x)
 
           // filter for peaks with slope steeper than cutoff
-          if (secondDerivative < this.slopeCutoff)
+          if (secondDerivative < -this.slopeCutoff/1000)
           {
 
             let peakFreq = this.spectrum.amp[i] > this.spectrum.amp[i + 1] ? p1.x : p2.x;
             let peakAmp = this.spectrum.amp[i] > this.spectrum.amp[i + 1] ? this.spectrum.amp[i] : this.spectrum.amp[i + 1];
-
-            // linearly interpolate FFT to find energy where derivative crosses zero
-            //let slope = (this.spectrum.amp[i + 1] - this.spectrum.amp[i])/(p2.x - p1.x);
-            //let peakAmp = this.spectrum.amp[i] + slope * (peakFreq - p1.x);
 
             peaks.freq.push(peakFreq);
             peaks.amp.push(peakAmp);
@@ -185,7 +206,9 @@ let app = new Vue({
 
   data: {
 
-    slopeCutoff: 0,
+    slopeCutoff: 5,
+
+    minFreq: 100,
 
     maxFreq: 5000,
 
