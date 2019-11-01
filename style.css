@@ -112,6 +112,8 @@ th, td {
   text-align: left;
 }
 
+
+
 .center {
   width: 60%;
   margin: 0 auto;
@@ -123,6 +125,30 @@ th, td {
   display: block;
 }
 
+#graph {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: border-box;
+
+  display:flex;
+  justify-content: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+#sliders {
+  width: 30%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#sliders > div {
+  text-align: center;
+}
 
 body {
   font-family: 'Open Sans', sans-serif;
@@ -216,7 +242,6 @@ blockquote {
   margin: 0 auto;
   padding: 0 20px;
   box-sizing: border-box;
-  margin-bottom: 50px;
 }
 
 /* For devices larger than 400px */

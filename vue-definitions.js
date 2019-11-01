@@ -3,7 +3,7 @@ Vue.component('graph', {
 
   props: ['traces', 'layout'],
 
-  template: '<div ref="graph" class="graph" style="width: 700px; height: 700px;"></div>',
+  template: '<div ref="graph" class="graph" style="height: 600px;"></div>',
 
   methods: {
 
@@ -88,9 +88,53 @@ let app = new Vue({
       tooltip.innerHTML = "Copy Table to Clipboard";
     },
 
-    findSlope(spectrum, i) {
-      // central difference version of derivative
-      return (spectrum.amp[i + 1] - spectrum.amp[i - 1])/((spectrum.freq[i + 1] - spectrum.freq[i - 1]));
+    // 'no smoothing' formulas: http://mathfaculty.fullerton.edu/mathews/n2003/differentiation/NumericalDiffProof.pdf
+    // 'smoothing' formulas: https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter#Tables_of_selected_convolution_coefficients
+    firstDerivative(a, i) {
+
+      if (this.smoothing == 0) {
+        return (a[i+1] - a[i-1])/2;
+      }
+
+      else if (this.smoothing == 1) {
+        return (a[i-2] - 8 * a[i-1] + 8 * a[i+1] - a[i+2])/12;
+      }
+
+      else if (this.smoothing == 2) {
+        return (22*a[i-3] -67*a[i-2] -58*a[i-1] +58*a[i+1] + 67*a[i+2] -22*a[i+3])/252;
+      }
+
+    },
+
+    // 'no smoothing' formulas: http://mathfaculty.fullerton.edu/mathews/n2003/differentiation/NumericalDiffProof.pdf
+    // 'smoothing' formulas: https://en.wikipedia.org/wiki/Savitzky%E2%80%93Golay_filter#Tables_of_selected_convolution_coefficients
+    secondDerivative(a, i) {
+      if (this.smoothing == 0) {
+        return a[i+1] - 2*a[i] + a[i-1]
+      }
+
+      else if (this.smoothing == 1) {
+        return (2*a[i-2] -a[i-1] -2*a[i] -a[i+1] +2*a[i+2])/7;
+      }
+
+      else if (this.smoothing == 2) {
+        return (5*a[i-3] -3*a[i-1] -4*a[i] -3*a[i+1] +5*a[i+3])/42;
+      }
+
+
+    },
+
+
+    dbToAmp(dbfs) {
+      let currentGain = Math.pow(10, -1 * Math.abs(dbfs)/20);
+      return Math.min(currentGain, this.maxGain);
+    },
+
+    playTone: function(){
+      let T = context.currentTime;
+      for (let i = 0; i < this.peaks.freq.length; i++) {
+        tone(this.peaks.freq[i], this.dbToAmp(this.peaks.amp[i]), T);
+      }
     },
 
   },
@@ -142,28 +186,29 @@ let app = new Vue({
         // calculate derivative
         let p1 = {
           x: this.spectrum.freq[i],
-          y: this.findSlope(this.spectrum, i)
+          y: this.firstDerivative(this.spectrum.amp, i)
         };
 
         let p2 = {
           x: this.spectrum.freq[i + 1],
-          y: this.findSlope(this.spectrum, i + 1)
+          y: this.firstDerivative(this.spectrum.amp, i + 1)
         };
 
         if (p1.y >= 0 && p2.y < 0)
         {
 
-          let secondDerivative = (p2.y - p1.y) / (p2.x - p1.x)
 
           // filter for peaks with slope steeper than cutoff
-          if (secondDerivative < -this.slopeCutoff/1000)
+          if (this.secondDerivative(this.spectrum.amp, i) < -this.slopeCutoff)
           {
 
             let peakFreq = this.spectrum.amp[i] > this.spectrum.amp[i + 1] ? p1.x : p2.x;
             let peakAmp = this.spectrum.amp[i] > this.spectrum.amp[i + 1] ? this.spectrum.amp[i] : this.spectrum.amp[i + 1];
 
-            peaks.freq.push(peakFreq);
-            peaks.amp.push(peakAmp);
+            if (peakAmp > this.minLoudness) {
+              peaks.freq.push(peakFreq);
+              peaks.amp.push(peakAmp);
+            }
 
           }
         }
@@ -206,11 +251,17 @@ let app = new Vue({
 
   data: {
 
-    slopeCutoff: 5,
+    slopeCutoff: 1,
+
+    smoothing: 1,
 
     minFreq: 100,
 
     maxFreq: 5000,
+
+    minLoudness: -70,
+
+    maxGain: 0.71, // maximum allowable gain
 
     text: "",
 
